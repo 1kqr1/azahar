@@ -25,6 +25,7 @@
 #include <QStyledItemDelegate>
 #include <QThreadPool>
 #include <QToolButton>
+#include <QStackedLayout>
 #include <QTreeView>
 #include <fmt/format.h>
 #include "citra_qt/citra_qt.h"
@@ -32,6 +33,7 @@
 #include "citra_qt/game_list.h"
 #include "citra_qt/game_list_p.h"
 #include "citra_qt/game_list_worker.h"
+#include "citra_qt/yokai_launcher.h"
 #include "citra_qt/uisettings.h"
 #include "common/common_paths.h"
 #include "common/file_util.h"
@@ -387,9 +389,45 @@ GameList::GameList(PlayTime::PlayTimeManager& play_time_manager_, GMainWindow* p
     layout->setContentsMargins(0, 0, 0, 0);
     layout->setSpacing(0);
 
-    layout->addWidget(tree_view);
-    layout->addWidget(search_field);
+    // ── 妖怪ウォッチ専用ランチャー ──
+    // 既定ではランチャーを表示し、「すべてのソフトを表示」で従来のリストに切り替える。
+    // 従来のリスト(tree_view + search_field)は list_page にまとめて、スタックの2枚目に置く。
+    launcher = new YokaiLauncher(item_model, this);
+    connect(launcher, &YokaiLauncher::GameChosen, this, &GameList::GameChosen);
+    connect(launcher, &YokaiLauncher::AddDirectoryRequested, this, &GameList::AddDirectory);
+    connect(launcher, &YokaiLauncher::ShowAllGamesRequested, this,
+            [this] { SetLauncherMode(false); });
+
+    auto* back_to_launcher = new QPushButton(tr("← 妖怪ウォッチ ランチャーに戻る"));
+    back_to_launcher->setFlat(true);
+    connect(back_to_launcher, &QPushButton::clicked, this, [this] { SetLauncherMode(true); });
+
+    list_page = new QWidget(this);
+    auto* list_layout = new QVBoxLayout(list_page);
+    list_layout->setContentsMargins(0, 0, 0, 0);
+    list_layout->setSpacing(0);
+    list_layout->addWidget(back_to_launcher, 0, Qt::AlignLeft);
+    list_layout->addWidget(tree_view);
+    list_layout->addWidget(search_field);
+
+    page_stack = new QStackedLayout;
+    page_stack->addWidget(launcher);
+    page_stack->addWidget(list_page);
+    layout->addLayout(page_stack);
     setLayout(layout);
+}
+
+void GameList::SetLauncherMode(bool enabled) {
+    page_stack->setCurrentWidget(enabled ? static_cast<QWidget*>(launcher) : list_page);
+    if (enabled) {
+        launcher->setFocus();
+    } else {
+        search_field->setFocus();
+    }
+}
+
+bool GameList::IsLauncherMode() const {
+    return page_stack->currentWidget() == launcher;
 }
 
 GameList::~GameList() {
@@ -511,6 +549,9 @@ void GameList::DonePopulating(const QStringList& watch_list) {
     }
     item_model->sort(tree_view->header()->sortIndicatorSection(),
                      tree_view->header()->sortIndicatorOrder());
+
+    // スキャン完了後にランチャーの一覧を作り直す
+    launcher->Rebuild();
 
     // resize all columns except for Name to fit their contents
     for (int i = 1; i < COLUMN_COUNT; i++) {

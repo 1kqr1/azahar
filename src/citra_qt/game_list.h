@@ -19,6 +19,8 @@ enum class MediaType : u32;
 }
 
 class GameListWorker;
+class YokaiLauncher;
+class QStackedLayout;
 class GameListDir;
 class GameListSearchField;
 class GMainWindow;
@@ -75,6 +77,10 @@ public:
     void SetFilterVisible(bool visibility);
     void SetDirectoryWatcherEnabled(bool enabled);
     bool IsEmpty() const;
+
+    /// true: 妖怪ウォッチ ランチャー表示 / false: 従来のゲームリスト表示
+    void SetLauncherMode(bool enabled);
+    bool IsLauncherMode() const;
 
     void LoadCompatibilityList();
     void PopulateAsync(QVector<UISettings::GameDir>& game_dirs);
@@ -142,6 +148,9 @@ private:
     QVBoxLayout* layout = nullptr;
     QTreeView* tree_view = nullptr;
     QStandardItemModel* item_model = nullptr;
+    YokaiLauncher* launcher = nullptr;
+    QWidget* list_page = nullptr;
+    QStackedLayout* page_stack = nullptr;
     GameListWorker* current_worker = nullptr;
     QFileSystemWatcher* watcher = nullptr;
     CompatibilityList compatibility_list;

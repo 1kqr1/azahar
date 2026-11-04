@@ -132,6 +132,8 @@ add_library(citra_qt STATIC EXCLUDE_FROM_ALL
     game_list_p.h
     game_list_worker.cpp
     game_list_worker.h
+    yokai_launcher.cpp
+    yokai_launcher.h
     hotkeys.cpp
     hotkeys.h
     hotkey_monitor.cpp

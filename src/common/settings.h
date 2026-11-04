@@ -525,6 +525,8 @@ struct Values {
     SwitchableSetting<GraphicsAPI, true> graphics_api{
 #if defined(ANDROID) && defined(ENABLE_VULKAN) // Prefer Vulkan on Android, OpenGL on everything else
         GraphicsAPI::Vulkan,
+#elif defined(__APPLE__) && defined(ENABLE_VULKAN) // macOS: Vulkan -> MoltenVK -> Metal
+        GraphicsAPI::Vulkan,
 #elif defined(ENABLE_OPENGL)
         GraphicsAPI::OpenGL,
 #elif defined(ENABLE_VULKAN)
