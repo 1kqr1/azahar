@@ -1,0 +1,58 @@
+# 妖怪ウォッチ版: Apple Silicon 向けの .app をビルドして DMG にまとめる
+name: yokai-macos-dmg
+
+on:
+  push:
+    branches: [ yokai-edition ]
+  workflow_dispatch:
+
+jobs:
+  macos-arm64:
+    runs-on: macos-26
+    env:
+      CCACHE_DIR: ${{ github.workspace }}/.ccache
+      CCACHE_COMPILERCHECK: content
+      CCACHE_SLOPPINESS: time_macros
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: recursive
+      - name: Set up cache
+        uses: actions/cache@v5
+        with:
+          path: ${{ env.CCACHE_DIR }}
+          key: yokai-macos-${{ github.sha }}
+          restore-keys: yokai-macos-
+      - name: Install tools
+        run: brew install ccache ninja spirv-tools
+      - name: Build (arm64, Vulkan→MoltenVK→Metal)
+        run: |
+          mkdir -p build/arm64 && cd build/arm64
+          cmake ../.. -GNinja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_OSX_ARCHITECTURES=arm64 \
+            -DENABLE_ROOM_STANDALONE=OFF \
+            -DENABLE_FFMPEG=OFF \
+            -DENABLE_VULKAN=ON
+          ninja
+          ninja bundle
+          mv ./bundle/azahar.app "./bundle/Azahar YW Edition.app"
+      - name: Verify MoltenVK is bundled
+        run: |
+          find "build/arm64/bundle/Azahar YW Edition.app" -iname '*moltenvk*' | tee /dev/stderr | grep -q .
+      - name: Create DMG
+        run: |
+          STAGE=build/dmg
+          mkdir -p "$STAGE"
+          cp -R "build/arm64/bundle/Azahar YW Edition.app" "$STAGE/"
+          ln -s /Applications "$STAGE/Applications"
+          cp "dist/yokai/ROMの入れ方.txt" "$STAGE/"
+          codesign --force --deep -s - "$STAGE/Azahar YW Edition.app"
+          mkdir -p artifacts
+          hdiutil create -volname "Azahar YW Edition" -srcfolder "$STAGE" \
+            -fs HFS+ -format UDZO -ov "artifacts/Azahar-YW-Edition-arm64.dmg"
+      - name: Upload DMG
+        uses: actions/upload-artifact@v7
+        with:
+          name: Azahar-YW-Edition-arm64-dmg
+          path: artifacts/*.dmg

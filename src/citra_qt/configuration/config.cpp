@@ -8,6 +8,7 @@
 #include <QSettings>
 #include <QVariant>
 #include <QVector>
+#include "citra_qt/yokai_launcher.h"
 #include "citra_qt/configuration/config.h"
 #include "citra_qt/setting_qkeys.h"
 #include "common/file_util.h"
@@ -698,6 +699,17 @@ void QtConfig::ReadPathValues() {
                 game_dir.path = UISettings::values.game_dir_deprecated;
                 game_dir.deep_scan = UISettings::values.game_dir_deprecated_deepscan;
                 UISettings::values.game_dirs.append(game_dir);
+            }
+        }
+        // 妖怪ウォッチ専用フォルダを作成し、ゲームリストに必ず含める（サブフォルダも検索）
+        {
+            YokaiLauncher::EnsureRomFolder();
+            UISettings::GameDir rom_dir;
+            rom_dir.path = YokaiLauncher::RomFolderPath();
+            rom_dir.deep_scan = true;
+            rom_dir.expanded = true;
+            if (!UISettings::values.game_dirs.contains(rom_dir)) {
+                UISettings::values.game_dirs.append(rom_dir);
             }
         }
         UISettings::values.last_artic_base_addr =

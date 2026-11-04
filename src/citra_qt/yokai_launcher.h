@@ -40,6 +40,13 @@ public:
     /// 発売順の並び順キー（小さいほど先）。該当しなければ 999。
     static int ReleaseOrder(const QString& title);
 
+    /// ROMを置く専用フォルダ（~/Documents/YokaiWatch-ROMs）のパス
+    static QString RomFolderPath();
+    /// ROMフォルダと説明ファイルを作成する（既にあれば何もしない）
+    static void EnsureRomFolder();
+    /// ROMフォルダを Finder で開く
+    static void OpenRomFolder();
+
 signals:
     void GameChosen(const QString& game_path);
     void ShowAllGamesRequested();

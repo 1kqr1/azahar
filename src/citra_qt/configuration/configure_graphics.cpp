@@ -48,6 +48,18 @@ ConfigureGraphics::ConfigureGraphics(QString gl_renderer, std::span<const QStrin
     ui->opengl_renderer_name_label->setText(gl_renderer);
 #endif
 
+#if defined(__APPLE__) && defined(ENABLE_VULKAN)
+    // macOS では Vulkan は MoltenVK 経由で Metal に変換される。分かりやすく表示名を変え、
+    // OpenGL（Apple が非推奨にしている）は選べないようにする。
+    graphics_api_combo_model->item(static_cast<u32>(Settings::GraphicsAPI::Vulkan))
+        ->setText(QStringLiteral("Metal (MoltenVK)"));
+    {
+        const auto gl_item =
+            graphics_api_combo_model->item(static_cast<u32>(Settings::GraphicsAPI::OpenGL));
+        gl_item->setFlags(gl_item->flags() & ~Qt::ItemIsEnabled);
+    }
+#endif
+
 #ifndef ENABLE_VULKAN
     const auto vulkan_item =
         graphics_api_combo_model->item(static_cast<u32>(Settings::GraphicsAPI::Vulkan));

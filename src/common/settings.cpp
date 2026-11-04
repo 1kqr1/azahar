@@ -260,6 +260,13 @@ Settings::GraphicsAPI GetWorkingGraphicsAPI() {
         graphics_api = Settings::GraphicsAPI::Vulkan;
     }
 #endif
+#if defined(__APPLE__) && defined(ENABLE_VULKAN) && !defined(HAVE_LIBRETRO)
+    // 妖怪ウォッチ版: macOS では常に Metal(MoltenVK) で描画する。
+    // 古い設定で OpenGL が保存されていても Vulkan 経路に切り替える。
+    if (graphics_api == Settings::GraphicsAPI::OpenGL) {
+        graphics_api = Settings::GraphicsAPI::Vulkan;
+    }
+#endif
     return graphics_api;
 }
 

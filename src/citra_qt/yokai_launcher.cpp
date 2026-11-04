@@ -6,6 +6,11 @@
 #include <array>
 #include <vector>
 #include <QApplication>
+#include <QDesktopServices>
+#include <QDir>
+#include <QFile>
+#include <QStandardPaths>
+#include <QUrl>
 #include <QHBoxLayout>
 #include <QKeyEvent>
 #include <QLabel>
@@ -159,6 +164,35 @@ int YokaiLauncher::ReleaseOrder(const QString& title) {
     return IsYokaiTitle(title) ? 10 : 999; // 無印「妖怪ウォッチ」
 }
 
+QString YokaiLauncher::RomFolderPath() {
+    const QString docs = QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation);
+    return QDir(docs).filePath(QStringLiteral("YokaiWatch-ROMs"));
+}
+
+void YokaiLauncher::EnsureRomFolder() {
+    QDir dir(RomFolderPath());
+    if (!dir.exists() && !dir.mkpath(QStringLiteral("."))) {
+        return;
+    }
+    QFile readme(dir.filePath(QStringLiteral("ここにROMを入れてください.txt")));
+    if (readme.exists() || !readme.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        return;
+    }
+    readme.write(QStringLiteral(
+        "このフォルダに、自分で吸い出した妖怪ウォッチのROMを入れてください。\n"
+        "対応形式: .3ds / .cci / .cxi / .3dsx / .app / .elf / .axf\n"
+        "（.cia はアプリのメニュー「ファイル → CIAをインストール」から入れてください）\n"
+        "\n"
+        "入れたらアプリを開き直すか、ランチャーの「再読み込み」を押すと一覧に出ます。\n"
+        "サブフォルダに分けても読み込まれます。\n")
+                     .toUtf8());
+}
+
+void YokaiLauncher::OpenRomFolder() {
+    EnsureRomFolder();
+    QDesktopServices::openUrl(QUrl::fromLocalFile(RomFolderPath()));
+}
+
 YokaiLauncher::YokaiLauncher(QStandardItemModel* source_model_, QWidget* parent)
     : QWidget{parent}, source_model{source_model_} {
     setAutoFillBackground(true);
@@ -187,12 +221,19 @@ YokaiLauncher::YokaiLauncher(QStandardItemModel* source_model_, QWidget* parent)
     show_all->setCursor(Qt::PointingHandCursor);
     connect(show_all, &QPushButton::clicked, this, &YokaiLauncher::ShowAllGamesRequested);
 
+    auto* open_roms = new QPushButton(QStringLiteral("ROMフォルダを開く"));
+    open_roms->setStyleSheet(button_style);
+    open_roms->setCursor(Qt::PointingHandCursor);
+    connect(open_roms, &QPushButton::clicked, this, [] { YokaiLauncher::OpenRomFolder(); });
+
     auto* header = new QHBoxLayout;
     header->setContentsMargins(24, 18, 24, 6);
     header->addWidget(title);
     header->addSpacing(12);
     header->addWidget(count_label, 0, Qt::AlignBottom);
     header->addStretch();
+    header->addWidget(open_roms);
+    header->addSpacing(8);
     header->addWidget(show_all);
 
     // ── タイル一覧 ────────────────────────────
@@ -225,17 +266,25 @@ YokaiLauncher::YokaiLauncher(QStandardItemModel* source_model_, QWidget* parent)
     // ── 見つからなかった時の画面 ───────────────
     empty_page = new QWidget;
     auto* empty_layout = new QVBoxLayout(empty_page);
-    auto* empty_text = new QLabel(QStringLiteral(
-        "妖怪ウォッチのソフトが見つかりません。\nROMを置いたフォルダを追加してください。"));
+    auto* empty_text = new QLabel(
+        QStringLiteral("妖怪ウォッチのソフトが見つかりません。\n"
+                       "下のボタンでROMフォルダを開き、ROMを入れてからアプリを開き直してください。\n\n%1")
+            .arg(QDir::toNativeSeparators(RomFolderPath())));
     empty_text->setAlignment(Qt::AlignCenter);
     empty_text->setStyleSheet(QStringLiteral("color: #9aa0bf;"));
-    auto* add_dir = new QPushButton(QStringLiteral("フォルダを追加"));
+    auto* open_roms_big = new QPushButton(QStringLiteral("ROMフォルダを開く"));
+    open_roms_big->setStyleSheet(button_style);
+    open_roms_big->setCursor(Qt::PointingHandCursor);
+    connect(open_roms_big, &QPushButton::clicked, this, [] { YokaiLauncher::OpenRomFolder(); });
+    auto* add_dir = new QPushButton(QStringLiteral("別のフォルダを追加"));
     add_dir->setStyleSheet(button_style);
     add_dir->setCursor(Qt::PointingHandCursor);
     connect(add_dir, &QPushButton::clicked, this, &YokaiLauncher::AddDirectoryRequested);
     empty_layout->addStretch();
     empty_layout->addWidget(empty_text);
     empty_layout->addSpacing(12);
+    empty_layout->addWidget(open_roms_big, 0, Qt::AlignHCenter);
+    empty_layout->addSpacing(6);
     empty_layout->addWidget(add_dir, 0, Qt::AlignHCenter);
     empty_layout->addStretch();
 
