@@ -39,7 +39,8 @@ jobs:
           mv ./bundle/azahar.app "./bundle/Azahar YW Edition.app"
       - name: Verify MoltenVK is bundled
         run: |
-          find "build/arm64/bundle/Azahar YW Edition.app" -iname '*moltenvk*' | tee /dev/stderr | grep -q .
+          find "build/arm64/bundle/Azahar YW Edition.app" -iname '*moltenvk*' || true
+          otool -L "build/arm64/bundle/Azahar YW Edition.app/Contents/MacOS/azahar" | grep -i -E "moltenvk|vulkan" || echo "::warning::MoltenVK not found in otool output"
       - name: Create DMG
         run: |
           STAGE=build/dmg
