@@ -50,8 +50,15 @@ jobs:
           cp "dist/yokai/ROMの入れ方.txt" "dist/yokai/通信のやり方.txt" "$STAGE/"
           codesign --force --deep -s - "$STAGE/Azahar YW Edition.app"
           mkdir -p artifacts
-          hdiutil create -volname "Azahar YW Edition" -srcfolder "$STAGE" \
-            -fs HFS+ -format UDZO -ov "artifacts/Azahar-YW-Edition-arm64.dmg"
+          # GitHub の macOS ランナーでは hdiutil がたまに "Resource busy" で失敗するので、数回やり直す
+          for i in 1 2 3 4 5; do
+            if hdiutil create -volname "Azahar YW Edition" -srcfolder "$STAGE" \
+                 -fs HFS+ -format UDZO -ov "artifacts/Azahar-YW-Edition-arm64.dmg"; then
+              break
+            fi
+            echo "hdiutil failed (try $i), retrying..."; sleep 10
+            [ "$i" = 5 ] && exit 1
+          done
       - name: Upload DMG
         uses: actions/upload-artifact@v7
         with:
