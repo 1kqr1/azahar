@@ -807,7 +807,34 @@ Result SVC::WaitSynchronization1(Handle handle, s64 nano_seconds) {
     LOG_TRACE(Kernel_SVC, "called handle=0x{:08X}({}:{}), nanoseconds={}", handle,
               object->GetTypeName(), object->GetName(), nano_seconds);
 
-    if (object->ShouldWait(thread)) {
+    const bool actual_should_wait = object->ShouldWait(thread);
+    bool apply_yw2_worker_ordering_workaround = false;
+    if (!actual_should_wait && nano_seconds == 0 &&
+        object->GetHandleType() == HandleType::Thread) {
+        const auto process = kernel.GetCurrentProcess();
+        if (process && process->codeset && IsYoKaiWatch2Title(process->codeset->program_id)) {
+            const auto target_thread = std::static_pointer_cast<Thread>(object);
+            const auto target_process = target_thread->owner_process.lock();
+            if (target_process == process && target_thread->status == ThreadStatus::Dead) {
+                const u16 command_id =
+                    kernel.TryUseYW2UDSWorkerOrderingWorkaround(process, target_thread);
+                apply_yw2_worker_ordering_workaround = command_id != 0;
+                if (command_id != 0) {
+                    LOG_DEBUG(Service_NWM,
+                              "YW2 worker polling workaround: title_id=0x{:016X} process_id={} "
+                              "role={} command_id=0x{:04X} worker_thread_id={} timeout=0 "
+                              "worker_status=Dead first_poll_consumed=true matched=true",
+                              process->codeset->program_id, process->process_id,
+                              command_id == 0x001D ? "host" : "client", command_id,
+                              target_thread->GetThreadId());
+                }
+            }
+        }
+    }
+
+    const bool effective_should_wait =
+        actual_should_wait || apply_yw2_worker_ordering_workaround;
+    if (effective_should_wait) {
         R_UNLESS(nano_seconds != 0, ResultTimeout);
 
         thread->wait_objects = {object};

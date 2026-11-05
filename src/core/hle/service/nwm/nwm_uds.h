@@ -349,6 +349,7 @@ private:
      *      2 : Channel of the current WiFi network connection.
      */
     void GetChannel(Kernel::HLERequestContext& ctx);
+    void SetProbeResponseParam(Kernel::HLERequestContext& ctx);
 
     /**
      * NWM_UDS::Initialize service function

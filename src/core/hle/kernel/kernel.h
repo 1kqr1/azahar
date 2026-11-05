@@ -46,6 +46,31 @@ class Recorder;
 
 namespace Kernel {
 
+constexpr bool IsYoKaiWatch2Title(u64 title_id) {
+    switch (title_id) {
+    // Japanese retail releases (runtime verified).
+    case 0x0004000000155100: // Shinuchi
+    case 0x000400000012F900: // Ganso
+    case 0x000400000012F800: // Honke
+    // International retail releases (experimental).
+    case 0x000400000019A900: // North America: Bony Spirits
+    case 0x000400000019AA00: // North America: Fleshy Souls
+    case 0x00040000001B2700: // North America: Psychic Specters
+    case 0x000400000019AB00: // Europe: Bony Spirits
+    case 0x000400000019AC00: // Europe: Fleshy Souls
+    case 0x00040000001B2900: // Europe: Psychic Specters
+    case 0x000400000019B000: // Australia: Bony Spirits
+    case 0x000400000019B100: // Australia: Fleshy Souls
+    case 0x00040000001B2800: // Australia: Psychic Specters
+    case 0x000400000019AE00: // Korea: Bony Spirits (Wonjo)
+    case 0x000400000019AF00: // Korea: Fleshy Souls (Bonga)
+    case 0x00040000001B2A00: // Korea: Psychic Specters (Kkeutpanwang)
+        return true;
+    default:
+        return false;
+    }
+}
+
 class AddressArbiter;
 class Event;
 class Mutex;
@@ -312,6 +337,11 @@ public:
     /// Retrieves a thread from the current list of threads.
     std::shared_ptr<Thread> GetThreadByID(u32 thread_id) const;
 
+    void RegisterYW2UDSWorkerOrderingWorkaround(const std::shared_ptr<Thread>& thread,
+                                                 u16 command_id);
+    u16 TryUseYW2UDSWorkerOrderingWorkaround(const std::shared_ptr<Process>& process,
+                                              const std::shared_ptr<Thread>& thread);
+
     std::span<const std::shared_ptr<Process>> GetProcessList() const {
         return process_list;
     }
@@ -422,6 +452,15 @@ public:
     void UpdateCore1AppCpuLimit();
 
 private:
+    struct YW2UDSWorkerOrderingState {
+        std::weak_ptr<Process> process;
+        std::weak_ptr<Thread> thread;
+        u16 command_id{};
+        bool first_poll_consumed{};
+    };
+
+    void ClearYW2UDSWorkerOrderingWorkaround(const std::shared_ptr<Process>& process);
+
     void MemoryInit(MemoryMode memory_mode, u64 override_init_time);
 
     void UpdateReportedMemory(MemoryMode memory_mode, New3dsMemoryMode n3ds_mode);
@@ -433,6 +472,10 @@ private:
     std::atomic<u32> next_object_id{0};
 
     std::atomic<int> pending_async_operations{};
+
+    std::mutex yw2_uds_worker_ordering_mutex;
+    YW2UDSWorkerOrderingState yw2_host_worker_ordering;
+    YW2UDSWorkerOrderingState yw2_client_worker_ordering;
 
     // Note: keep the member order below in order to perform correct destruction.
     // Thread manager is destructed before process list in order to Stop threads and clear thread
