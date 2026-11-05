@@ -28,6 +28,12 @@ Azahar（3DSエミュレーター）をフォークし、妖怪ウォッチ専�
    - 本家の build.yml / format.yml / libretro.yml はフォークでは不要なので削除済み
    - `dist/yokai/ROMの入れ方.txt` を DMG に同梱
 
+5. **ROMフォルダの .cia 自動インストール** `src/citra_qt/yokai_cia_autoinstall.{h,cpp}`
+   - ROMフォルダ（サブフォルダ含む）を監視し、新しい .cia/.zcia/.bcia を GMainWindow::InstallCIA に渡す
+   - 処理済みは `.yw_installed_cia`（名前・サイズ・更新日時）に記録。コピー中・ゲーム中は待つ
+6. **妖怪ウォッチ2 ローカル通信修正**（utosa123/azahar の yw2-local-play-v3-beta、fbd3fb0..2b9131b を取り込み）
+   - nwm_uds / kernel / svc の変更。対戦・交換・バスターズ用。本家側はベータ版
+
 ## ローカルビルド（Mac）
 ```bash
 brew install cmake ninja spirv-tools ccache
