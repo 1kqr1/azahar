@@ -47,7 +47,7 @@ jobs:
           mkdir -p "$STAGE"
           cp -R "build/arm64/bundle/Azahar YW Edition.app" "$STAGE/"
           ln -s /Applications "$STAGE/Applications"
-          cp "dist/yokai/ROMの入れ方.txt" "$STAGE/"
+          cp "dist/yokai/ROMの入れ方.txt" "dist/yokai/通信のやり方.txt" "$STAGE/"
           codesign --force --deep -s - "$STAGE/Azahar YW Edition.app"
           mkdir -p artifacts
           hdiutil create -volname "Azahar YW Edition" -srcfolder "$STAGE" \

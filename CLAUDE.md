@@ -34,6 +34,11 @@ Azahar（3DSエミュレーター）をフォークし、妖怪ウォッチ専�
 6. **妖怪ウォッチ2 ローカル通信修正**（utosa123/azahar の yw2-local-play-v3-beta、fbd3fb0..2b9131b を取り込み）
    - nwm_uds / kernel / svc の変更。対戦・交換・バスターズ用。本家側はベータ版
 
+7. **Windows / Android ビルド** `.github/workflows/yokai-windows-android.yml`
+   - Windows: MSVC・FFmpeg なしで zip。ランチャー等の Qt 機能も入る
+   - Android: relWithDebInfoLite（パッケージ名 .debug 付き・デバッグ署名）。公式版と並べて入れられる。Android は独自UIのためランチャー等はなく、通信修正のみ
+   - 説明書: `dist/yokai/通信のやり方.txt`、`dist/yokai/Windowsでの使い方.txt`
+
 ## ローカルビルド（Mac）
 ```bash
 brew install cmake ninja spirv-tools ccache
