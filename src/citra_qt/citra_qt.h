@@ -36,6 +36,7 @@ class QtConfig;
 class ClickableLabel;
 class EmuThread;
 class GameList;
+class YokaiCiaAutoInstaller;
 enum class GameListOpenTarget;
 class GameListPlaceholder;
 enum class GameListShortcutTarget;
@@ -132,6 +133,7 @@ public:
     ~GMainWindow();
 
     GameList* game_list;
+    YokaiCiaAutoInstaller* cia_auto_installer = nullptr; // ROMフォルダの .cia 自動インストール
     std::unique_ptr<PlayTime::PlayTimeManager> play_time_manager;
 #ifdef ENABLE_DISCORD_RPC
     std::unique_ptr<DiscordRPC::DiscordInterface> discord_rpc;

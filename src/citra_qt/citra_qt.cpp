@@ -71,6 +71,7 @@
 #include "citra_qt/dumping/dumping_dialog.h"
 #endif
 #include "citra_qt/game_list.h"
+#include "citra_qt/yokai_cia_autoinstall.h"
 #include "citra_qt/hotkeys.h"
 #include "citra_qt/loading_screen.h"
 #include "citra_qt/movie/movie_play_dialog.h"
@@ -1212,6 +1213,19 @@ void GMainWindow::ConnectWidgetEvents() {
     connect(this, &GMainWindow::UpdateProgress, this, &GMainWindow::OnUpdateProgress);
     connect(this, &GMainWindow::CIAInstallReport, this, &GMainWindow::OnCIAInstallReport);
     connect(this, &GMainWindow::CIAInstallFinished, this, &GMainWindow::OnCIAInstallFinished);
+
+    // ROMフォルダに置かれた .cia を自動でインストールする（妖怪ウォッチ版）
+    cia_auto_installer = new YokaiCiaAutoInstaller(this);
+    cia_auto_installer->can_install = [this] {
+        // ゲーム中や、手動インストールの最中は待つ
+        return !emulation_running && ui->action_Install_CIA->isEnabled();
+    };
+    connect(cia_auto_installer, &YokaiCiaAutoInstaller::InstallRequested, this,
+            [this](const QStringList& paths) {
+                statusBar()->showMessage(
+                    tr("ROMフォルダの CIA を %1 個インストールしています…").arg(paths.size()));
+                InstallCIA(paths);
+            });
     connect(this, &GMainWindow::CompressFinished, this, &GMainWindow::OnCompressFinished);
     connect(this, &GMainWindow::BundleFinished, this, &GMainWindow::OnBundleFinished);
     connect(this, &GMainWindow::UpdateThemedIcons, multiplayer_state,
@@ -2602,6 +2616,11 @@ void GMainWindow::OnUpdateProgress(std::size_t written, std::size_t total) {
 }
 
 void GMainWindow::OnCIAInstallReport(Service::AM::InstallStatus status, QString filepath) {
+    // 自動インストール分は結果を記録する。成功・「CIAではない」・「暗号化されている」は
+    // 何度やっても同じなので記録して次回から飛ばす。ファイルが開けない等は次回また試す。
+    cia_auto_installer->OnResult(filepath, status == Service::AM::InstallStatus::Success ||
+                                               status == Service::AM::InstallStatus::ErrorInvalid ||
+                                               status == Service::AM::InstallStatus::ErrorEncrypted);
     QString filename = QFileInfo(filepath).fileName();
     switch (status) {
     case Service::AM::InstallStatus::Success:
@@ -2688,6 +2707,7 @@ void GMainWindow::OnCIAInstallFinished() {
     game_list->SetDirectoryWatcherEnabled(true);
     ui->action_Install_CIA->setEnabled(true);
     game_list->PopulateAsync(UISettings::values.game_dirs);
+    cia_auto_installer->OnBatchFinished();
 }
 
 void GMainWindow::UninstallTitles(
@@ -4069,6 +4089,7 @@ void GMainWindow::mouseReleaseEvent([[maybe_unused]] QMouseEvent* event) {
 void GMainWindow::showEvent([[maybe_unused]] QShowEvent* event) {
     game_list->LoadCompatibilityList();
     game_list->PopulateAsync(UISettings::values.game_dirs);
+    cia_auto_installer->ScheduleScan();
 }
 
 bool GMainWindow::ShowExceptionDialog(Core::System::ResultStatus result,
